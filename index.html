@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>俄羅斯方塊</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>俄羅斯方塊</h1>
+            <div class="score-board">
+                <div class="score-item">
+                    <span class="label">分數</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">等級</span>
+                    <span id="level">1</span>
+                </div>
+                <div class="score-item">
+                    <span class="label">行數</span>
+                    <span id="lines">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="game-canvas"></canvas>
+            <div class="next-piece">
+                <span class="label">下一個</span>
+                <canvas id="next-canvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="mobile-controls">
+            <div class="control-row">
+                <button id="btn-left">◀</button>
+                <button id="btn-rotate">↻</button>
+                <button id="btn-right">▶</button>
+            </div>
+            <div class="control-row">
+                <button id="btn-down">▼</button>
+                <button id="btn-drop">快速</button>
+            </div>
+        </div>
+        
+        <div class="game-over hidden" id="game-over">
+            <div class="game-over-content">
+                <h2>遊戲結束</h2>
+                <p>最終分數: <span id="final-score">0</span></p>
+                <button id="btn-restart">再來一局</button>
+            </div>
+        </div>
+        
+        <div class="start-overlay" id="start-overlay">
+            <div class="start-content">
+                <h1>俄羅斯方塊</h1>
+                <p>經典方塊遊戲</p>
+                <button id="btn-start">開始遊戲</button>
+            </div>
+        </div>
+        
+        <div class="pause-overlay hidden" id="pause-overlay">
+            <div class="pause-content">
+                <h2>暫停</h2>
+                <p>點擊繼續</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
