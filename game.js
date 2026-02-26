@@ -694,33 +694,39 @@ class Tetris {
             clearInterval(this.autoPlayInterval);
         }
         
+        let targetX = null;
+        let targetRotations = null;
+        let lastPieceId = null;
+        
         this.autoPlayInterval = setInterval(() => {
             if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
             
-            const bestMove = this.findBestMove();
-            if (bestMove) {
-                let moves = 0;
-                const maxMoves = 20;
-                
-                while (this.currentPiece.x > bestMove.x && moves < maxMoves) {
-                    this.move(-1);
-                    moves++;
-                }
-                while (this.currentPiece.x < bestMove.x && moves < maxMoves) {
-                    this.move(1);
-                    moves++;
-                }
-                
-                let rots = 0;
-                while (bestMove.rotations > 0 && rots < 4) {
-                    this.rotate();
-                    bestMove.rotations--;
-                    rots++;
+            const pieceId = this.currentPiece.color + '-' + this.currentPiece.shape.flat().join('');
+            
+            if (pieceId !== lastPieceId) {
+                const bestMove = this.findBestMove();
+                if (bestMove) {
+                    targetX = bestMove.x;
+                    targetRotations = bestMove.rotations;
+                    lastPieceId = pieceId;
                 }
             }
-        }, 100);
+            
+            if (targetX !== null && this.currentPiece) {
+                const diff = targetX - this.currentPiece.x;
+                
+                if (Math.abs(diff) > 0) {
+                    this.move(diff > 0 ? 1 : -1);
+                } else if (targetRotations > 0) {
+                    this.rotate();
+                    targetRotations--;
+                } else {
+                    this.drop();
+                }
+            }
+        }, 30);
     }
     
     findBestMove() {
@@ -794,25 +800,58 @@ class Tetris {
     evaluatePosition(board) {
         let score = 0;
         
-        let linesCleared = 0;
-        for (let y = ROWS - 1; y >= 0; y--) {
+        const linesCleared = this.countLines(board);
+        score += linesCleared * 10000;
+        
+        const totalHeight = this.getTotalHeight(board);
+        score -= totalHeight * 5;
+        
+        if (totalHeight > 15) {
+            score -= (totalHeight - 15) * 20;
+        }
+        
+        const holes = this.countHoles(board);
+        score -= holes * 100;
+        
+        const bumpiness = this.getBumpiness(board);
+        score -= bumpiness * 10;
+        
+        const wellBlocks = this.countWellBlocks(board);
+        score += wellBlocks * 20;
+        
+        const rowTransitions = this.countRowTransitions(board);
+        score -= rowTransitions * 3;
+        
+        const colTransitions = this.countColTransitions(board);
+        score -= colTransitions * 3;
+        
+        return score;
+    }
+    
+    countLines(board) {
+        let lines = 0;
+        for (let y = 0; y < ROWS; y++) {
             if (board[y].every(cell => cell !== 0)) {
-                linesCleared++;
+                lines++;
             }
         }
-        score += linesCleared * 1000;
-        
-        let totalHeight = 0;
+        return lines;
+    }
+    
+    getTotalHeight(board) {
+        let height = 0;
         for (let x = 0; x < COLS; x++) {
             for (let y = 0; y < ROWS; y++) {
                 if (board[y][x] !== 0) {
-                    totalHeight += ROWS - y;
+                    height += ROWS - y;
                     break;
                 }
             }
         }
-        score -= totalHeight * 2;
-        
+        return height;
+    }
+    
+    countHoles(board) {
         let holes = 0;
         for (let x = 0; x < COLS; x++) {
             let foundBlock = false;
@@ -824,20 +863,81 @@ class Tetris {
                 }
             }
         }
-        score -= holes * 50;
-        
+        return holes;
+    }
+    
+    getBumpiness(board) {
         let bumpiness = 0;
-        for (let x = 0; x < COLS - 1; x++) {
-            let height1 = 0, height2 = 0;
-            for (let y = 0; y < ROWS; y++) {
-                if (board[y][x] !== 0) height1 = ROWS - y;
-                if (board[y][x + 1] !== 0) height2 = ROWS - y;
-            }
-            bumpiness += Math.abs(height1 - height2);
-        }
-        score -= bumpiness * 5;
+        const heights = [];
         
-        return score;
+        for (let x = 0; x < COLS; x++) {
+            let h = 0;
+            for (let y = 0; y < ROWS; y++) {
+                if (board[y][x] !== 0) {
+                    h = ROWS - y;
+                    break;
+                }
+            }
+            heights.push(h);
+        }
+        
+        for (let x = 0; x < COLS - 1; x++) {
+            bumpiness += Math.abs(heights[x] - heights[x + 1]);
+        }
+        
+        return bumpiness;
+    }
+    
+    countWellBlocks(board) {
+        let wells = 0;
+        const heights = [];
+        
+        for (let x = 0; x < COLS; x++) {
+            let h = 0;
+            for (let y = 0; y < ROWS; y++) {
+                if (board[y][x] !== 0) {
+                    h = ROWS - y;
+                    break;
+                }
+            }
+            heights.push(h);
+        }
+        
+        for (let x = 1; x < COLS - 1; x++) {
+            if (heights[x] < heights[x - 1] && heights[x] < heights[x + 1]) {
+                wells += Math.min(heights[x - 1], heights[x + 1]) - heights[x];
+            }
+        }
+        
+        return wells;
+    }
+    
+    countRowTransitions(board) {
+        let transitions = 0;
+        
+        for (let y = 0; y < ROWS; y++) {
+            for (let x = 0; x < COLS - 1; x++) {
+                if ((board[y][x] === 0) !== (board[y][x + 1] === 0)) {
+                    transitions++;
+                }
+            }
+        }
+        
+        return transitions;
+    }
+    
+    countColTransitions(board) {
+        let transitions = 0;
+        
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS - 1; y++) {
+                if ((board[y][x] === 0) !== (board[y + 1][x] === 0)) {
+                    transitions++;
+                }
+            }
+        }
+        
+        return transitions;
     }
 }
 
