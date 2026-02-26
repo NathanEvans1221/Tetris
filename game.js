@@ -175,6 +175,8 @@ class Tetris {
         this.dropInterval = 1000;
         this.lastDrop = 0;
         this.lastLevel = 1;
+        this.autoPlay = false;
+        this.autoPlayInterval = null;
         
         this.bindEvents();
     }
@@ -197,6 +199,12 @@ class Tetris {
         this.dropInterval = 1000;
         this.lastDrop = Date.now();
         this.lastLevel = 1;
+        if (this.autoPlayInterval) {
+            clearInterval(this.autoPlayInterval);
+            this.autoPlayInterval = null;
+        }
+        this.autoPlay = false;
+        document.getElementById('btn-auto').textContent = '🤖';
         
         this.updateScore();
         this.draw();
@@ -206,6 +214,9 @@ class Tetris {
         this.started = true;
         this.lastDrop = Date.now();
         this.spawnPiece();
+        if (this.autoPlay) {
+            this.runAutoPlay();
+        }
         this.gameLoop();
     }
     
@@ -465,6 +476,14 @@ class Tetris {
     
     showGameOver() {
         this.sounds.gameOver();
+        if (this.autoPlay) {
+            this.autoPlay = false;
+            if (this.autoPlayInterval) {
+                clearInterval(this.autoPlayInterval);
+                this.autoPlayInterval = null;
+            }
+            document.getElementById('btn-auto').textContent = '🤖';
+        }
         document.getElementById('final-score').textContent = this.score;
         document.getElementById('game-over').classList.remove('hidden');
     }
@@ -475,9 +494,16 @@ class Tetris {
         
         if (this.paused) {
             overlay.classList.remove('hidden');
+            if (this.autoPlayInterval) {
+                clearInterval(this.autoPlayInterval);
+                this.autoPlayInterval = null;
+            }
         } else {
             overlay.classList.add('hidden');
             this.lastDrop = Date.now();
+            if (this.autoPlay) {
+                this.runAutoPlay();
+            }
             this.gameLoop();
         }
     }
@@ -646,6 +672,167 @@ class Tetris {
         this.canvas.addEventListener('mouseleave', () => {
             isMouseDown = false;
         });
+        
+        document.getElementById('btn-auto').addEventListener('click', (e) => {
+            this.toggleAutoPlay();
+            e.target.textContent = this.autoPlay ? '⏹️' : '🤖';
+        });
+    }
+    
+    toggleAutoPlay() {
+        this.autoPlay = !this.autoPlay;
+        if (this.autoPlay && this.started && !this.gameOver && !this.paused) {
+            this.runAutoPlay();
+        } else if (!this.autoPlay && this.autoPlayInterval) {
+            clearInterval(this.autoPlayInterval);
+            this.autoPlayInterval = null;
+        }
+    }
+    
+    runAutoPlay() {
+        if (this.autoPlayInterval) {
+            clearInterval(this.autoPlayInterval);
+        }
+        
+        this.autoPlayInterval = setInterval(() => {
+            if (this.gameOver || this.paused || !this.autoPlay) {
+                clearInterval(this.autoPlayInterval);
+                return;
+            }
+            
+            if (this.currentPiece) {
+                const bestMove = this.findBestMove();
+                if (bestMove) {
+                    while (this.currentPiece.x > bestMove.x) {
+                        this.move(-1);
+                    }
+                    while (this.currentPiece.x < bestMove.x) {
+                        this.move(1);
+                    }
+                    while (bestMove.rotations > 0) {
+                        this.rotate();
+                        bestMove.rotations--;
+                    }
+                }
+            }
+        }, 50);
+    }
+    
+    findBestMove() {
+        if (!this.currentPiece) return null;
+        
+        let bestScore = -Infinity;
+        let bestMove = null;
+        
+        const rotations = this.getRotationStates(this.currentPiece.shape);
+        
+        for (let r = 0; r < rotations.length; r++) {
+            const shape = rotations[r];
+            
+            for (let x = -2; x < COLS; x++) {
+                const testPiece = {
+                    shape: shape,
+                    color: this.currentPiece.color,
+                    x: x,
+                    y: this.currentPiece.y
+                };
+                
+                const boardCopy = this.board.map(row => [...row]);
+                this.simulateDrop(boardCopy, testPiece);
+                
+                if (testPiece.y < 0) continue;
+                
+                const score = this.evaluatePosition(boardCopy);
+                
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestMove = { x: x, rotations: r };
+                }
+            }
+        }
+        
+        return bestMove;
+    }
+    
+    getRotationStates(shape) {
+        const states = [shape];
+        let current = shape;
+        
+        for (let i = 1; i < 4; i++) {
+            current = current[0].map((_, idx) => 
+                current.map(row => row[idx]).reverse()
+            );
+            states.push(current);
+        }
+        
+        return states;
+    }
+    
+    simulateDrop(board, piece) {
+        while (!this.collide(board, { ...piece, y: piece.y + 1 })) {
+            piece.y++;
+        }
+        
+        for (let y = 0; y < piece.shape.length; y++) {
+            for (let x = 0; x < piece.shape[y].length; x++) {
+                if (piece.shape[y][x] !== 0) {
+                    const boardY = piece.y + y;
+                    const boardX = piece.x + x;
+                    if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
+                        board[boardY][boardX] = piece.color;
+                    }
+                }
+            }
+        }
+    }
+    
+    evaluatePosition(board) {
+        let score = 0;
+        
+        let linesCleared = 0;
+        for (let y = ROWS - 1; y >= 0; y--) {
+            if (board[y].every(cell => cell !== 0)) {
+                linesCleared++;
+            }
+        }
+        score += linesCleared * 1000;
+        
+        let totalHeight = 0;
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS; y++) {
+                if (board[y][x] !== 0) {
+                    totalHeight += ROWS - y;
+                    break;
+                }
+            }
+        }
+        score -= totalHeight * 2;
+        
+        let holes = 0;
+        for (let x = 0; x < COLS; x++) {
+            let foundBlock = false;
+            for (let y = 0; y < ROWS; y++) {
+                if (board[y][x] !== 0) {
+                    foundBlock = true;
+                } else if (foundBlock) {
+                    holes++;
+                }
+            }
+        }
+        score -= holes * 50;
+        
+        let bumpiness = 0;
+        for (let x = 0; x < COLS - 1; x++) {
+            let height1 = 0, height2 = 0;
+            for (let y = 0; y < ROWS; y++) {
+                if (board[y][x] !== 0) height1 = ROWS - y;
+                if (board[y][x + 1] !== 0) height2 = ROWS - y;
+            }
+            bumpiness += Math.abs(height1 - height2);
+        }
+        score -= bumpiness * 5;
+        
+        return score;
     }
 }
 
