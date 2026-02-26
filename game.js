@@ -728,7 +728,7 @@ class Tetris {
                 this.hardDrop();
                 currentPieceId = null;
             }
-        }, 80);
+        }, 200);
     }
     
     calculateBestMove() {
