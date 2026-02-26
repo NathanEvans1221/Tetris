@@ -702,20 +702,178 @@ class Tetris {
                 return;
             }
             
-            const bestMove = this.findBestMove();
-            if (!bestMove) return;
+            const best = this.calculateBestMove();
+            if (!best) {
+                this.hardDrop();
+                return;
+            }
             
-            const diff = bestMove.x - this.currentPiece.x;
-            
-            if (diff !== 0) {
-                this.move(diff > 0 ? 1 : -1);
-            } else if (bestMove.rotations > 0) {
+            if (best.x < this.currentPiece.x) {
+                this.move(-1);
+            } else if (best.x > this.currentPiece.x) {
+                this.move(1);
+            } else if (best.rotate > 0) {
                 this.rotate();
-                bestMove.rotations--;
             } else {
                 this.hardDrop();
             }
-        }, 50);
+        }, 30);
+    }
+    
+    calculateBestMove() {
+        const piece = this.currentPiece;
+        if (!piece) return null;
+        
+        let bestScore = -Infinity;
+        let best = null;
+        
+        const shapes = this.getAllRotations(piece.shape);
+        
+        for (let r = 0; r < shapes.length; r++) {
+            const shape = shapes[r];
+            const width = shape[0].length;
+            
+            for (let x = -2; x <= COLS - width + 2; x++) {
+                if (this.canPlace(piece.shape, x, 0)) {
+                    const landingY = this.getDropY(piece.shape, x);
+                    const score = this.evaluateMove(piece.shape, x, landingY);
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = { x: x, rotate: r };
+                    }
+                }
+            }
+        }
+        
+        return best;
+    }
+    
+    getAllRotations(shape) {
+        const result = [shape];
+        let current = shape;
+        
+        for (let i = 1; i < 4; i++) {
+            current = this.rotateMatrix(current);
+            if (this.matricesEqual(current, shape)) break;
+            result.push(current);
+        }
+        
+        return result;
+    }
+    
+    rotateMatrix(matrix) {
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+        const rotated = [];
+        
+        for (let x = 0; x < cols; x++) {
+            rotated[x] = [];
+            for (let y = rows - 1; y >= 0; y--) {
+                rotated[x].push(matrix[y][x]);
+            }
+        }
+        
+        return rotated;
+    }
+    
+    matricesEqual(a, b) {
+        if (!a || !b || a.length !== b.length) return false;
+        for (let y = 0; y < a.length; y++) {
+            for (let x = 0; x < a[y].length; x++) {
+                if (a[y][x] !== b[y][x]) return false;
+            }
+        }
+        return true;
+    }
+    
+    canPlace(shape, x, y) {
+        for (let dy = 0; dy < shape.length; dy++) {
+            for (let dx = 0; dx < shape[dy].length; dx++) {
+                if (shape[dy][dx] !== 0) {
+                    const nx = x + dx;
+                    const ny = y + dy;
+                    
+                    if (nx < 0 || nx >= COLS || ny >= ROWS) return false;
+                    if (ny >= 0 && this.board[ny][nx] !== 0) return false;
+                }
+            }
+        }
+        return true;
+    }
+    
+    getDropY(shape, x) {
+        let y = -shape.length;
+        while (this.canPlace(shape, x, y + 1)) {
+            y++;
+        }
+        return y;
+    }
+    
+    evaluateMove(shape, x, landingY) {
+        const testBoard = this.board.map(row => [...row]);
+        
+        for (let dy = 0; dy < shape.length; dy++) {
+            for (let dx = 0; dx < shape[dy].length; dx++) {
+                if (shape[dy][dx] !== 0) {
+                    const ny = landingY + dy;
+                    const nx = x + dx;
+                    if (ny >= 0 && ny < ROWS && nx >= 0 && nx < COLS) {
+                        testBoard[ny][nx] = this.currentPiece.color;
+                    }
+                }
+            }
+        }
+        
+        let score = 0;
+        
+        let lines = 0;
+        for (let y = ROWS - 1; y >= 0; y--) {
+            if (testBoard[y].every(cell => cell !== 0)) {
+                lines++;
+            }
+        }
+        score += lines * 100000;
+        
+        let holes = 0;
+        for (let x = 0; x < COLS; x++) {
+            let hasBlock = false;
+            for (let y = 0; y < ROWS; y++) {
+                if (testBoard[y][x] !== 0) hasBlock = true;
+                else if (hasBlock) holes++;
+            }
+        }
+        score -= holes * 10000;
+        
+        let maxHeight = 0;
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS; y++) {
+                if (testBoard[y][x] !== 0) {
+                    maxHeight = Math.max(maxHeight, ROWS - y);
+                    break;
+                }
+            }
+        }
+        score -= maxHeight * 100;
+        
+        let bumps = 0;
+        let heights = [];
+        for (let x = 0; x < COLS; x++) {
+            let h = 0;
+            for (let y = 0; y < ROWS; y++) {
+                if (testBoard[y][x] !== 0) {
+                    h = ROWS - y;
+                    break;
+                }
+            }
+            heights.push(h);
+        }
+        for (let x = 0; x < COLS - 1; x++) {
+            bumps += Math.abs(heights[x] - heights[x + 1]);
+        }
+        score -= bumps * 500;
+        
+        return score;
     }
     
     findBestMove() {
@@ -724,25 +882,17 @@ class Tetris {
         let bestScore = -Infinity;
         let bestMove = null;
         
-        const rotations = this.getRotationStates(this.currentPiece.shape);
+        const rotations = this.getAllRotations(this.currentPiece.shape);
         
         for (let r = 0; r < rotations.length; r++) {
             const shape = rotations[r];
+            const width = shape[0].length;
             
-            for (let x = -2; x < COLS + 2; x++) {
-                const testPiece = {
-                    shape: shape,
-                    color: this.currentPiece.color,
-                    x: x,
-                    y: 0
-                };
+            for (let x = -2; x <= COLS - width + 2; x++) {
+                if (!this.canPlace(shape, x, 0)) continue;
                 
-                const boardCopy = this.board.map(row => [...row]);
-                this.simulateDrop(boardCopy, testPiece);
-                
-                if (testPiece.y < 0) continue;
-                
-                const score = this.evaluatePosition(boardCopy);
+                const landingY = this.getDropY(shape, x);
+                const score = this.evaluateMove(shape, x, landingY);
                 
                 if (score > bestScore) {
                     bestScore = score;
@@ -752,181 +902,6 @@ class Tetris {
         }
         
         return bestMove;
-    }
-    
-    getRotationStates(shape) {
-        const states = [];
-        let current = shape.map(row => [...row]);
-        
-        for (let i = 0; i < 4; i++) {
-            states.push(current);
-            current = current[0].map((_, idx) => 
-                current.map(row => row[idx]).reverse()
-            ).map(row => [...row]);
-        }
-        
-        return states;
-    }
-    
-    simulateDrop(board, piece) {
-        while (!this.collide(board, { ...piece, y: piece.y + 1 })) {
-            piece.y++;
-        }
-        
-        for (let y = 0; y < piece.shape.length; y++) {
-            for (let x = 0; x < piece.shape[y].length; x++) {
-                if (piece.shape[y][x] !== 0) {
-                    const boardY = piece.y + y;
-                    const boardX = piece.x + x;
-                    if (boardY >= 0 && boardY < ROWS && boardX >= 0 && boardX < COLS) {
-                        board[boardY][boardX] = piece.color;
-                    }
-                }
-            }
-        }
-    }
-    
-    evaluatePosition(board) {
-        let score = 0;
-        
-        const linesCleared = this.countLines(board);
-        score += linesCleared * 10000;
-        
-        const totalHeight = this.getTotalHeight(board);
-        score -= totalHeight * 5;
-        
-        if (totalHeight > 15) {
-            score -= (totalHeight - 15) * 20;
-        }
-        
-        const holes = this.countHoles(board);
-        score -= holes * 100;
-        
-        const bumpiness = this.getBumpiness(board);
-        score -= bumpiness * 10;
-        
-        const wellBlocks = this.countWellBlocks(board);
-        score += wellBlocks * 20;
-        
-        const rowTransitions = this.countRowTransitions(board);
-        score -= rowTransitions * 3;
-        
-        const colTransitions = this.countColTransitions(board);
-        score -= colTransitions * 3;
-        
-        return score;
-    }
-    
-    countLines(board) {
-        let lines = 0;
-        for (let y = 0; y < ROWS; y++) {
-            if (board[y].every(cell => cell !== 0)) {
-                lines++;
-            }
-        }
-        return lines;
-    }
-    
-    getTotalHeight(board) {
-        let height = 0;
-        for (let x = 0; x < COLS; x++) {
-            for (let y = 0; y < ROWS; y++) {
-                if (board[y][x] !== 0) {
-                    height += ROWS - y;
-                    break;
-                }
-            }
-        }
-        return height;
-    }
-    
-    countHoles(board) {
-        let holes = 0;
-        for (let x = 0; x < COLS; x++) {
-            let foundBlock = false;
-            for (let y = 0; y < ROWS; y++) {
-                if (board[y][x] !== 0) {
-                    foundBlock = true;
-                } else if (foundBlock) {
-                    holes++;
-                }
-            }
-        }
-        return holes;
-    }
-    
-    getBumpiness(board) {
-        let bumpiness = 0;
-        const heights = [];
-        
-        for (let x = 0; x < COLS; x++) {
-            let h = 0;
-            for (let y = 0; y < ROWS; y++) {
-                if (board[y][x] !== 0) {
-                    h = ROWS - y;
-                    break;
-                }
-            }
-            heights.push(h);
-        }
-        
-        for (let x = 0; x < COLS - 1; x++) {
-            bumpiness += Math.abs(heights[x] - heights[x + 1]);
-        }
-        
-        return bumpiness;
-    }
-    
-    countWellBlocks(board) {
-        let wells = 0;
-        const heights = [];
-        
-        for (let x = 0; x < COLS; x++) {
-            let h = 0;
-            for (let y = 0; y < ROWS; y++) {
-                if (board[y][x] !== 0) {
-                    h = ROWS - y;
-                    break;
-                }
-            }
-            heights.push(h);
-        }
-        
-        for (let x = 1; x < COLS - 1; x++) {
-            if (heights[x] < heights[x - 1] && heights[x] < heights[x + 1]) {
-                wells += Math.min(heights[x - 1], heights[x + 1]) - heights[x];
-            }
-        }
-        
-        return wells;
-    }
-    
-    countRowTransitions(board) {
-        let transitions = 0;
-        
-        for (let y = 0; y < ROWS; y++) {
-            for (let x = 0; x < COLS - 1; x++) {
-                if ((board[y][x] === 0) !== (board[y][x + 1] === 0)) {
-                    transitions++;
-                }
-            }
-        }
-        
-        return transitions;
-    }
-    
-    countColTransitions(board) {
-        let transitions = 0;
-        
-        for (let x = 0; x < COLS; x++) {
-            for (let y = 0; y < ROWS - 1; y++) {
-                if ((board[y][x] === 0) !== (board[y + 1][x] === 0)) {
-                    transitions++;
-                }
-            }
-        }
-        
-        return transitions;
     }
 }
 
