@@ -483,6 +483,7 @@ class Tetris {
                 this.autoPlayInterval = null;
             }
             document.getElementById('btn-auto').textContent = '🤖';
+            this.dropInterval = Math.max(50, this.dropInterval / 3);
         }
         document.getElementById('final-score').textContent = this.score;
         document.getElementById('game-over').classList.remove('hidden');
@@ -686,6 +687,7 @@ class Tetris {
         } else if (!this.autoPlay && this.autoPlayInterval) {
             clearInterval(this.autoPlayInterval);
             this.autoPlayInterval = null;
+            this.dropInterval = Math.max(50, this.dropInterval / 3);
         }
     }
     
