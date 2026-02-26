@@ -695,27 +695,32 @@ class Tetris {
         }
         
         this.autoPlayInterval = setInterval(() => {
-            if (this.gameOver || this.paused || !this.autoPlay) {
-                clearInterval(this.autoPlayInterval);
+            if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
             
-            if (this.currentPiece) {
-                const bestMove = this.findBestMove();
-                if (bestMove) {
-                    while (this.currentPiece.x > bestMove.x) {
-                        this.move(-1);
-                    }
-                    while (this.currentPiece.x < bestMove.x) {
-                        this.move(1);
-                    }
-                    while (bestMove.rotations > 0) {
-                        this.rotate();
-                        bestMove.rotations--;
-                    }
+            const bestMove = this.findBestMove();
+            if (bestMove) {
+                let moves = 0;
+                const maxMoves = 20;
+                
+                while (this.currentPiece.x > bestMove.x && moves < maxMoves) {
+                    this.move(-1);
+                    moves++;
+                }
+                while (this.currentPiece.x < bestMove.x && moves < maxMoves) {
+                    this.move(1);
+                    moves++;
+                }
+                
+                let rots = 0;
+                while (bestMove.rotations > 0 && rots < 4) {
+                    this.rotate();
+                    bestMove.rotations--;
+                    rots++;
                 }
             }
-        }, 50);
+        }, 100);
     }
     
     findBestMove() {
@@ -729,12 +734,12 @@ class Tetris {
         for (let r = 0; r < rotations.length; r++) {
             const shape = rotations[r];
             
-            for (let x = -2; x < COLS; x++) {
+            for (let x = -2; x < COLS + 2; x++) {
                 const testPiece = {
                     shape: shape,
                     color: this.currentPiece.color,
                     x: x,
-                    y: this.currentPiece.y
+                    y: 0
                 };
                 
                 const boardCopy = this.board.map(row => [...row]);
@@ -755,14 +760,14 @@ class Tetris {
     }
     
     getRotationStates(shape) {
-        const states = [shape];
-        let current = shape;
+        const states = [];
+        let current = shape.map(row => [...row]);
         
-        for (let i = 1; i < 4; i++) {
+        for (let i = 0; i < 4; i++) {
+            states.push(current);
             current = current[0].map((_, idx) => 
                 current.map(row => row[idx]).reverse()
-            );
-            states.push(current);
+            ).map(row => [...row]);
         }
         
         return states;
