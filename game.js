@@ -718,7 +718,7 @@ class Tetris {
                 const diff = targetX - this.currentPiece.x;
                 
                 if (Math.abs(diff) > 0) {
-                    const step = diff > 0 ? Math.min(diff, 8) : Math.max(diff, -8);
+                    const step = diff > 0 ? Math.min(diff, 16) : Math.max(diff, -16);
                     this.move(step);
                 } else if (targetRotations > 0) {
                     this.rotate();
@@ -730,7 +730,7 @@ class Tetris {
                     lastPieceId = null;
                 }
             }
-        }, 2);
+        }, 1);
     }
     
     findBestMove() {
