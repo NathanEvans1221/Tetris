@@ -2,6 +2,19 @@ class SoundManager {
     constructor() {
         this.ctx = null;
         this.enabled = true;
+        this.bgmEnabled = false;
+        this.bgmInterval = null;
+        this.bgmNotes = [
+            { freq: 261.63, dur: 0.2 },
+            { freq: 293.66, dur: 0.2 },
+            { freq: 329.63, dur: 0.2 },
+            { freq: 349.23, dur: 0.2 },
+            { freq: 392.00, dur: 0.2 },
+            { freq: 349.23, dur: 0.2 },
+            { freq: 329.63, dur: 0.2 },
+            { freq: 293.66, dur: 0.2 },
+        ];
+        this.bgmIndex = 0;
     }
 
     init() {
@@ -30,6 +43,39 @@ class SoundManager {
         
         osc.start();
         osc.stop(this.ctx.currentTime + duration);
+    }
+
+    startBgm() {
+        if (!this.bgmEnabled || !this.ctx || this.bgmInterval) return;
+        
+        const playNote = () => {
+            if (!this.bgmEnabled) return;
+            const note = this.bgmNotes[this.bgmIndex];
+            this.playTone(note.freq, note.dur * 0.8, 'sine', 0.04);
+            this.bgmIndex = (this.bgmIndex + 1) % this.bgmNotes.length;
+        };
+        
+        playNote();
+        this.bgmInterval = setInterval(playNote, 400);
+    }
+
+    stopBgm() {
+        if (this.bgmInterval) {
+            clearInterval(this.bgmInterval);
+            this.bgmInterval = null;
+        }
+        this.bgmIndex = 0;
+    }
+
+    toggleBgm() {
+        this.bgmEnabled = !this.bgmEnabled;
+        if (this.bgmEnabled) {
+            this.init();
+            this.startBgm();
+        } else {
+            this.stopBgm();
+        }
+        return this.bgmEnabled;
     }
 
     move() {
@@ -472,6 +518,11 @@ class Tetris {
         document.getElementById('btn-sound').addEventListener('click', (e) => {
             const enabled = this.sounds.toggle();
             e.target.textContent = enabled ? '🔊' : '🔇';
+        });
+        
+        document.getElementById('btn-bgm').addEventListener('click', (e) => {
+            const enabled = this.sounds.toggleBgm();
+            e.target.textContent = enabled ? '🎵' : '🔕';
         });
         
         document.getElementById('btn-left').addEventListener('click', () => this.move(-1));
