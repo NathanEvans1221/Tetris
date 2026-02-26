@@ -698,33 +698,35 @@ class Tetris {
         }
         
         let targetX = 0;
-        let targetRotate = 0;
-        let currentRotate = 0;
+        let targetRotations = 0;
+        let currentPieceId = null;
         
         this.autoPlayInterval = setInterval(() => {
             if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
             
-            const best = this.findBestMove();
-            if (!best) {
-                this.hardDrop();
-                return;
+            const pieceId = this.currentPiece.color;
+            
+            if (pieceId !== currentPieceId) {
+                const best = this.findBestMove();
+                if (best) {
+                    targetX = best.x;
+                    targetRotations = best.rotations;
+                    currentPieceId = pieceId;
+                }
             }
             
-            targetX = best.x;
-            targetRotate = best.rotations;
-            
-            if (targetRotate !== currentRotate) {
+            if (targetRotations > 0) {
                 this.rotate();
-                currentRotate = (currentRotate + 1) % 4;
+                targetRotations--;
             } else if (this.currentPiece.x < targetX) {
                 this.move(1);
             } else if (this.currentPiece.x > targetX) {
                 this.move(-1);
             } else {
                 this.hardDrop();
-                currentRotate = 0;
+                currentPieceId = null;
             }
         }, 30);
     }
