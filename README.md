@@ -1,10 +1,12 @@
 # 俄羅斯方塊 (Tetris)
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?repo=https://github.com/chiisen/Tetris)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/chiisen/Tetris)](https://github.com/chiisen/Tetris/stargazers)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?repo=https://github.com/chiisen/Tetris)  
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  
+[![GitHub stars](https://img.shields.io/github/stars/chiisen/Tetris)](https://github.com/chiisen/Tetris/stargazers)  
 
 經典俄羅斯方塊網頁版，支援電腦與手機遊玩。
+
+![Tetris](./images/Tetris.png)
 
 **線上 DEMO**: https://tetris.liawchiisen.workers.dev/
 
