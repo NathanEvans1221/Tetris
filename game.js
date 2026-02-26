@@ -697,25 +697,34 @@ class Tetris {
             clearInterval(this.autoPlayInterval);
         }
         
+        let targetX = 0;
+        let targetRotate = 0;
+        let currentRotate = 0;
+        
         this.autoPlayInterval = setInterval(() => {
             if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
             
-            const best = this.calculateBestMove();
+            const best = this.findBestMove();
             if (!best) {
                 this.hardDrop();
                 return;
             }
             
-            if (best.x < this.currentPiece.x) {
-                this.move(-1);
-            } else if (best.x > this.currentPiece.x) {
-                this.move(1);
-            } else if (best.rotate > 0) {
+            targetX = best.x;
+            targetRotate = best.rotations;
+            
+            if (targetRotate !== currentRotate) {
                 this.rotate();
+                currentRotate = (currentRotate + 1) % 4;
+            } else if (this.currentPiece.x < targetX) {
+                this.move(1);
+            } else if (this.currentPiece.x > targetX) {
+                this.move(-1);
             } else {
                 this.hardDrop();
+                currentRotate = 0;
             }
         }, 30);
     }
