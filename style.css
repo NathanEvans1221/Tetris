@@ -43,6 +43,23 @@ body {
     text-shadow: 0 0 10px var(--accent);
 }
 
+.sound-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-medium);
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 8px;
+    transition: transform 0.2s;
+}
+
+.sound-btn:hover {
+    transform: scale(1.1);
+}
+
 .score-board {
     display: flex;
     justify-content: space-around;

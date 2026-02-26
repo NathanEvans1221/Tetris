@@ -1,3 +1,82 @@
+class SoundManager {
+    constructor() {
+        this.ctx = null;
+        this.enabled = true;
+    }
+
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    }
+
+    playTone(freq, duration, type = 'square', volume = 0.1) {
+        if (!this.enabled || !this.ctx) return;
+        
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        
+        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    }
+
+    move() {
+        this.playTone(200, 0.05, 'sine', 0.05);
+    }
+
+    rotate() {
+        this.playTone(300, 0.05, 'sine', 0.05);
+    }
+
+    drop() {
+        this.playTone(150, 0.05, 'sine', 0.05);
+    }
+
+    lineClear(lines) {
+        const baseFreq = 400 + (lines * 50);
+        for (let i = 0; i < lines; i++) {
+            setTimeout(() => {
+                this.playTone(baseFreq + (i * 100), 0.15, 'square', 0.08);
+            }, i * 50);
+        }
+    }
+
+    levelUp() {
+        const notes = [523, 659, 784, 1047];
+        notes.forEach((freq, i) => {
+            setTimeout(() => {
+                this.playTone(freq, 0.2, 'sine', 0.1);
+            }, i * 100);
+        });
+    }
+
+    gameOver() {
+        const notes = [400, 350, 300, 250, 200];
+        notes.forEach((freq, i) => {
+            setTimeout(() => {
+                this.playTone(freq, 0.3, 'sawtooth', 0.1);
+            }, i * 150);
+        });
+    }
+
+    toggle() {
+        this.enabled = !this.enabled;
+        return this.enabled;
+    }
+}
+
 const COLS = 10;
 const ROWS = 20;
 const BLOCK_SIZE = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--cell-size')) || 28;
@@ -31,6 +110,8 @@ class Tetris {
         this.nextCanvas = document.getElementById('next-canvas');
         this.nextCtx = this.nextCanvas.getContext('2d');
         
+        this.sounds = new SoundManager();
+        
         this.canvas.width = COLS * BLOCK_SIZE;
         this.canvas.height = ROWS * BLOCK_SIZE;
         this.nextCanvas.width = 4 * BLOCK_SIZE;
@@ -47,6 +128,7 @@ class Tetris {
         this.nextPiece = null;
         this.dropInterval = 1000;
         this.lastDrop = 0;
+        this.lastLevel = 1;
         
         this.bindEvents();
     }
@@ -56,6 +138,7 @@ class Tetris {
     }
     
     init() {
+        this.sounds.init();
         this.board = this.createBoard();
         this.score = 0;
         this.level = 1;
@@ -67,6 +150,7 @@ class Tetris {
         this.currentPiece = null;
         this.dropInterval = 1000;
         this.lastDrop = Date.now();
+        this.lastLevel = 1;
         
         this.updateScore();
         this.draw();
@@ -142,6 +226,8 @@ class Tetris {
         
         if (this.collide(this.board, this.currentPiece)) {
             this.currentPiece.shape = previous;
+        } else {
+            this.sounds.rotate();
         }
     }
     
@@ -149,6 +235,8 @@ class Tetris {
         this.currentPiece.x += dir;
         if (this.collide(this.board, this.currentPiece)) {
             this.currentPiece.x -= dir;
+        } else {
+            this.sounds.move();
         }
     }
     
@@ -204,8 +292,14 @@ class Tetris {
             this.lines += linesCleared;
             this.score += [0, 100, 300, 500, 800][linesCleared] * this.level;
             
+            const oldLevel = this.level;
             this.level = Math.floor(this.lines / 10) + 1;
             this.dropInterval = Math.max(100, 1000 - (this.level - 1) * 100);
+            
+            this.sounds.lineClear(linesCleared);
+            if (this.level > oldLevel) {
+                this.sounds.levelUp();
+            }
             
             this.animateLineClear();
             this.updateScore();
@@ -324,6 +418,7 @@ class Tetris {
     }
     
     showGameOver() {
+        this.sounds.gameOver();
         document.getElementById('final-score').textContent = this.score;
         document.getElementById('game-over').classList.remove('hidden');
     }
@@ -372,6 +467,11 @@ class Tetris {
             document.getElementById('start-overlay').classList.add('hidden');
             this.init();
             this.start();
+        });
+        
+        document.getElementById('btn-sound').addEventListener('click', (e) => {
+            const enabled = this.sounds.toggle();
+            e.target.textContent = enabled ? '🔊' : '🔇';
         });
         
         document.getElementById('btn-left').addEventListener('click', () => this.move(-1));
@@ -499,5 +599,5 @@ class Tetris {
 }
 
 window.addEventListener('load', () => {
-    new Tetris();
+    window.tetris = new Tetris();
 });
