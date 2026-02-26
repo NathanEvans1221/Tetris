@@ -699,21 +699,19 @@ class Tetris {
         
         let targetX = null;
         let targetRotations = null;
-        let lastPieceId = null;
+        let lastColor = null;
         
         this.autoPlayInterval = setInterval(() => {
             if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
             
-            const pieceId = this.currentPiece.color + '-' + this.currentPiece.shape.flat().join('');
-            
-            if (pieceId !== lastPieceId) {
+            if (this.currentPiece.color !== lastColor) {
                 const bestMove = this.findBestMove();
                 if (bestMove) {
                     targetX = bestMove.x;
                     targetRotations = bestMove.rotations;
-                    lastPieceId = pieceId;
+                    lastColor = this.currentPiece.color;
                 }
             }
             
@@ -730,10 +728,10 @@ class Tetris {
                     this.hardDrop();
                     targetX = null;
                     targetRotations = null;
-                    lastPieceId = null;
+                    lastColor = null;
                 }
             }
-        }, 1);
+        }, 50);
     }
     
     findBestMove() {
