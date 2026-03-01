@@ -63,6 +63,13 @@ body {
     margin-top: 10px;
 }
 
+/* 版本號碼 */
+.version {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 8px;
+}
+
 /* 音效/功能按鈕 */
 .sound-btn {
     background: var(--bg-medium);
