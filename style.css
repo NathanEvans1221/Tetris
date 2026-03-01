@@ -1,18 +1,21 @@
+/* ==================== 全域重置 ==================== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
+/* ==================== CSS 變數 ==================== */
 :root {
-    --bg-dark: #1a1a2e;
-    --bg-medium: #16213e;
-    --bg-light: #0f3460;
-    --accent: #e94560;
-    --text: #eee;
-    --cell-size: 28px;
+    --bg-dark: #1a1a2e;       /* 深色背景 */
+    --bg-medium: #16213e;     /* 中等背景色 */
+    --bg-light: #0f3460;      /* 淺色背景/按鈕 */
+    --accent: #e94560;        /* 強調色 (紅色) */
+    --text: #eee;             /* 文字顏色 */
+    --cell-size: 28px;        /* 方塊大小 */
 }
 
+/* ==================== 頁面樣式 ==================== */
 body {
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: var(--bg-dark);
@@ -22,9 +25,10 @@ body {
     justify-content: center;
     align-items: center;
     overflow: hidden;
-    touch-action: none;
+    touch-action: none;  /* 防止觸控裝置的預設行為 */
 }
 
+/* ==================== 遊戲容器 ==================== */
 .game-container {
     width: 100%;
     max-width: 500px;
@@ -32,6 +36,7 @@ body {
     position: relative;
 }
 
+/* ==================== 遊戲標題區 ==================== */
 .game-header {
     text-align: center;
     margin-bottom: 20px;
@@ -43,12 +48,14 @@ body {
     text-shadow: 0 0 10px var(--accent);
 }
 
+/* 標題按鈕區域 */
 .header-buttons {
     display: inline-flex;
     gap: 8px;
     margin-top: 5px;
 }
 
+/* 按鈕樣式重複定義 (保持相容性) */
 .header-buttons {
     display: inline-flex;
     gap: 8px;
@@ -56,6 +63,7 @@ body {
     margin-top: 10px;
 }
 
+/* 音效/功能按鈕 */
 .sound-btn {
     background: var(--bg-medium);
     border: none;
@@ -70,6 +78,7 @@ body {
     transform: scale(1.1);
 }
 
+/* ==================== 分數面板 ==================== */
 .score-board {
     display: flex;
     justify-content: space-around;
@@ -96,14 +105,17 @@ body {
     color: var(--accent);
 }
 
+/* ==================== 遊戲區域 ==================== */
 .game-area {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 15px;
     margin-bottom: 20px;
+    position: relative;
 }
 
+/* 下一個方塊預覽區 */
 .next-piece {
     display: flex;
     flex-direction: row;
@@ -114,6 +126,7 @@ body {
     gap: 15px;
 }
 
+/* 遊戲主畫布 */
 #game-canvas {
     background: var(--bg-medium);
     border: 3px solid var(--bg-light);
@@ -121,6 +134,7 @@ body {
     box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
 }
 
+/* 預覽區樣式重複定義 */
 .next-piece {
     display: flex;
     flex-direction: row;
@@ -141,10 +155,12 @@ body {
     border-radius: 5px;
 }
 
+/* ==================== 行動裝置控制按鈕 ==================== */
 .mobile-controls {
     display: none;
 }
 
+/* ==================== 開始畫面覆蓋層 ==================== */
 .start-overlay {
     position: fixed;
     top: 0;
@@ -194,6 +210,7 @@ body {
     box-shadow: 0 0 25px var(--accent);
 }
 
+/* ==================== 遊戲結束/暫停畫面 ==================== */
 .game-over,
 .pause-overlay {
     position: fixed;
@@ -217,6 +234,7 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
+/* 淡入動畫 */
 @keyframes fadeIn {
     from { opacity: 0; transform: scale(0.9); }
     to { opacity: 1; transform: scale(1); }
@@ -246,20 +264,19 @@ body {
     box-shadow: 0 0 20px var(--accent);
 }
 
+/* 隱藏類別 */
 .hidden {
     display: none !important;
 }
 
+/* ==================== 消除行數動畫 ==================== */
 @keyframes lineClear {
     0% { transform: scaleX(1); opacity: 1; }
     50% { transform: scaleX(1.1); opacity: 0.5; background: white; }
     100% { transform: scaleX(1); opacity: 1; }
 }
 
-.game-area {
-    position: relative;
-}
-
+/* ==================== 連擊效果文字 ==================== */
 .combo-effect {
     position: absolute;
     top: 50%;
@@ -274,6 +291,7 @@ body {
     animation: comboPop 1s ease-out forwards;
 }
 
+/* 連擊彈出動畫 */
 @keyframes comboPop {
     0% { transform: translate(-50%, -10%); opacity: 0; scale: 0.5; }
     20% { transform: translate(-50%, -50%); opacity: 1; scale: 1.2; }
@@ -281,11 +299,14 @@ body {
     100% { transform: translate(-50%, -90%); opacity: 0; scale: 1.5; }
 }
 
+/* ==================== 行動裝置響應式設計 ==================== */
 @media (max-width: 600px) {
+    /* 調整方塊大小 */
     :root {
         --cell-size: 22px;
     }
     
+    /* 容器自適應 */
     .game-container {
         padding: 10px;
         height: 100vh;
@@ -330,6 +351,7 @@ body {
         border-width: 2px;
     }
     
+    /* 顯示行動裝置控制按鈕 */
     .mobile-controls {
         display: flex;
         flex-direction: column;
@@ -369,6 +391,7 @@ body {
     }
 }
 
+/* ==================== 橫向模式響應式設計 ==================== */
 @media (max-height: 700px) and (orientation: landscape) {
     .game-container {
         flex-direction: row;

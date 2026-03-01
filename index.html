@@ -1,20 +1,27 @@
 <!DOCTYPE html>
+<!-- 俄羅斯方塊遊戲 - 網頁版 -->
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <!-- 行動裝置 viewport 設定，user-scalable=no 防止縮放影響遊戲體驗 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>俄羅斯方塊</title>
+    <!-- 引入外部樣式表 -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- 遊戲主容器 -->
     <div class="game-container">
+        <!-- 遊戲標題區 -->
         <div class="game-header">
             <h1>俄羅斯方塊</h1>
+            <!-- 遊戲控制按鈕: BGM、音效、自动玩法 -->
             <div class="header-buttons">
                 <button id="btn-bgm" class="sound-btn" title="背景音樂">🎵</button>
                 <button id="btn-sound" class="sound-btn" title="音效切換">🔊</button>
                 <button id="btn-auto" class="sound-btn" title="電腦代玩">🤖</button>
             </div>
+            <!-- 分數面板 -->
             <div class="score-board">
                 <div class="score-item">
                     <span class="label">分數</span>
@@ -35,14 +42,18 @@
             </div>
         </div>
         
+        <!-- 遊戲區域 -->
         <div class="game-area">
+            <!-- 主要遊戲畫布 -->
             <canvas id="game-canvas"></canvas>
+            <!-- 下一個方塊預覽區 -->
             <div class="next-piece">
                 <span class="label">下一個</span>
                 <canvas id="next-canvas"></canvas>
             </div>
         </div>
         
+        <!-- 行動裝置觸控按鈕 -->
         <div class="mobile-controls">
             <div class="control-row">
                 <button id="btn-left">◀</button>
@@ -55,6 +66,7 @@
             </div>
         </div>
         
+        <!-- 遊戲結束畫面 (隱藏) -->
         <div class="game-over hidden" id="game-over">
             <div class="game-over-content">
                 <h2>遊戲結束</h2>
@@ -63,6 +75,7 @@
             </div>
         </div>
         
+        <!-- 開始遊戲覆蓋層 -->
         <div class="start-overlay" id="start-overlay">
             <div class="start-content">
                 <h1>俄羅斯方塊</h1>
@@ -71,6 +84,7 @@
             </div>
         </div>
         
+        <!-- 暫停畫面覆蓋層 (隱藏) -->
         <div class="pause-overlay hidden" id="pause-overlay">
             <div class="pause-content">
                 <h2>暫停</h2>
@@ -79,6 +93,7 @@
         </div>
     </div>
     
+    <!-- 引入遊戲邏輯腳本 -->
     <script src="game.js"></script>
 </body>
 </html>
