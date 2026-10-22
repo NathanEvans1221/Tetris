@@ -2,6 +2,12 @@
   "name": "tetris",
   "version": "1.0.0",
   "private": true,
-  "engines": { "node": ">=22" },
-  "scripts": { "test": "node --test tests/*.test.cjs", "check": "node --check game.js" }
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check game.js",
+    "dev": "node scripts/serve.cjs"
+  }
 }
