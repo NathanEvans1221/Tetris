@@ -15,7 +15,7 @@ test('AI gravity is derived from level across clear, pause and toggle',()=>{
 test('AI recalculates when gravity replaces a piece with the same color',()=>{
     const h=createGame();const g=h.start();g.toggleAutoPlay();
     let searches=0;g.findBestMove=()=>{searches++;return {x:0,rotations:0};};
-    h.advance(200);const color=g.currentPiece.color;g.spawnPiece();assert.equal(g.currentPiece.color,color);
+    h.advance(200);const color=g.currentPiece.color;g.nextPiece={color,shape:g.currentPiece.shape.map(row=>[...row])};g.spawnPiece();assert.equal(g.currentPiece.color,color);
     h.advance(200);assert.equal(searches,2);
 });
 test('AI callback from a previous session cannot move a new game',()=>{

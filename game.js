@@ -225,6 +225,7 @@ class Tetris {
         // 方塊狀態
         this.currentPiece = null;                    // 當前控制的方塊
         this.nextPiece = null;                       // 下一個方塊
+        this.bag = [];
 
         // 計時與速度控制
         this.dropInterval = 1000;                    // 自動掉落間隔 (毫秒)
@@ -289,6 +290,7 @@ class Tetris {
         this.paused = false;                            // 清除暫停狀態
         this.started = false;                           // 標記為未開始
         this.nextPiece = null;                          // 清除下一個方塊
+        this.bag = [];
         this.currentPiece = null;                       // 清除當前方塊
         this.dropInterval = 1000;                       // 重置掉落速度
         this.lastDrop = Date.now();                     // 重置計時
@@ -427,39 +429,22 @@ class Tetris {
      * 產生新方塊
      * 隨機選擇一種方塊類型，設定位置並檢查遊戲結束條件
      */
-    spawnPiece() {
-        // 第一次產生方塊時，隨機選擇類型
-        if (this.nextPiece === null) {
-            // 隨機產生 1-7 的數字對應 7 種方塊形狀
-            const type = Math.floor(Math.random() * 7) + 1;
-            this.currentPiece = {
-                shape: SHAPES[type].map(row => [...row]),  // 深拷貝形狀矩陣
-                color: type,                               // 記錄顏色類型
-                x: Math.floor(COLS / 2) - 2,              // 水平置中
-                y: 0                                        // 從頂部開始
-            };
-
-            // 產生下一個方塊
-            const nextType = Math.floor(Math.random() * 7) + 1;
-            this.nextPiece = {
-                shape: SHAPES[nextType].map(row => [...row]),
-                color: nextType
-            };
-        } else {
-            // 使用預存的下一個方塊
-            this.currentPiece = {
-                shape: this.nextPiece.shape.map(row => [...row]),
-                color: this.nextPiece.color,
-                x: Math.floor(COLS / 2) - 2,
-                y: 0
-            };
-
-            const nextType = Math.floor(Math.random() * 7) + 1;
-            this.nextPiece = {
-                shape: SHAPES[nextType].map(row => [...row]),
-                color: nextType
-            };
+    randomPiece() {
+        if (this.bag.length === 0) {
+            this.bag = [1, 2, 3, 4, 5, 6, 7];
+            for (let i = this.bag.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
+            }
         }
+        const type = this.bag.pop();
+        return { shape: SHAPES[type].map(row => [...row]), color: type };
+    }
+
+    spawnPiece() {
+        const piece = this.nextPiece || this.randomPiece();
+        this.currentPiece = { ...piece, shape: piece.shape.map(row => [...row]), x: Math.floor(COLS / 2) - 2, y: 0 };
+        this.nextPiece = this.randomPiece();
 
         // 檢查新方塊是否與現有方塊碰撞 (遊戲結束條件)
         if (this.collide(this.board, this.currentPiece)) {
