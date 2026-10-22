@@ -302,7 +302,20 @@ class Tetris {
      * 硬掉落 - 讓方塊直接落到底部
      * 每次下落 2 分，快速填充時使用
      */
+    canAct() {
+        return this.started && !this.gameOver && !this.paused && !!this.currentPiece;
+    }
+
+    softDrop() {
+        if (this.drop()) {
+            this.score++;
+            this.sounds.drop();
+            this.updateScore();
+        }
+    }
+
     hardDrop() {
+        if (!this.canAct()) return;
         // 持續向下直到無法移動
         while (!this.collide(this.board, { ...this.currentPiece, y: this.currentPiece.y + 1 })) {
             this.currentPiece.y++;
@@ -463,6 +476,7 @@ class Tetris {
      * 順時針旋轉 90 度，若旋轉後碰撞則還原
      */
     rotate() {
+        if (!this.canAct()) return false;
         // 矩陣旋轉演算法: 先轉置再反轉每行
         const rotated = this.currentPiece.shape[0].map((_, i) =>
             this.currentPiece.shape.map(row => row[i]).reverse()
@@ -483,6 +497,7 @@ class Tetris {
      * @param {number} dir - 移動方向 (-1: 左, 1: 右)
      */
     move(dir) {
+        if (!this.canAct()) return false;
         this.currentPiece.x += dir;  // 嘗試移動
         if (this.collide(this.board, this.currentPiece)) {
             this.currentPiece.x -= dir;  // 碰撞則還原
@@ -497,7 +512,7 @@ class Tetris {
      */
     drop() {
         // 如果方塊為空，則直接返回
-        if (!this.currentPiece) return;
+        if (!this.canAct()) return false;
 
         this.currentPiece.y++;
         if (this.collide(this.board, this.currentPiece)) {
@@ -505,8 +520,11 @@ class Tetris {
             this.lock();
             this.clearLines();
             this.spawnPiece();
+            this.lastDrop = Date.now();
+            return false;
         }
         this.lastDrop = Date.now();
+        return true;
     }
 
 
@@ -715,6 +733,7 @@ class Tetris {
      * 切換暫停/繼續狀態
      */
     togglePause() {
+        if (!this.started || this.gameOver) return;
         this.paused = !this.paused;
         const overlay = document.getElementById('pause-overlay');
 
@@ -745,6 +764,7 @@ class Tetris {
         document.addEventListener('keydown', (e) => {
             if (this.gameOver || !this.started) return;
 
+            if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', ' ', 'p', 'P'].includes(e.key)) e.preventDefault();
             switch (e.key) {
                 case 'ArrowLeft':
                     this.move(-1);    // 左移
@@ -753,9 +773,7 @@ class Tetris {
                     this.move(1);     // 右移
                     break;
                 case 'ArrowDown':
-                    this.drop();      // 軟掉落
-                    this.score += 1;  // 每次軟掉落 +1 分
-                    this.updateScore();
+                    this.softDrop();
                     break;
                 case 'ArrowUp':
                 case ' ':            // 空白鍵
@@ -787,9 +805,7 @@ class Tetris {
         document.getElementById('btn-left').addEventListener('click', () => this.move(-1));
         document.getElementById('btn-right').addEventListener('click', () => this.move(1));
         document.getElementById('btn-down').addEventListener('click', () => {
-            this.drop();
-            this.score += 1;
-            this.updateScore();
+            this.softDrop();
         });
         document.getElementById('btn-rotate').addEventListener('click', () => this.rotate());
         document.getElementById('btn-drop').addEventListener('click', () => this.hardDrop());
@@ -814,7 +830,7 @@ class Tetris {
         let touchStartTime = 0;
 
         this.canvas.addEventListener('touchstart', (e) => {
-            if (this.gameOver || this.paused) return;
+            if (!this.canAct()) return;
             e.preventDefault();
             touchStartX = e.touches[0].clientX;
             touchStartY = e.touches[0].clientY;
@@ -826,7 +842,7 @@ class Tetris {
         }, { passive: false });
 
         this.canvas.addEventListener('touchend', (e) => {
-            if (this.gameOver || this.paused) return;
+            if (!this.canAct()) return;
             e.preventDefault();
 
             const touchEndX = e.changedTouches[0].clientX;
@@ -844,9 +860,7 @@ class Tetris {
                 else if (deltaX < -minSwipe) this.move(-1);
             } else {
                 if (deltaY > minSwipe) {
-                    this.drop();
-                    this.score += 1;
-                    this.updateScore();
+                    this.softDrop();
                 }
             }
         }, { passive: false });
@@ -859,7 +873,7 @@ class Tetris {
         let isMouseDown = false;
 
         this.canvas.addEventListener('mousedown', (e) => {
-            if (this.gameOver || this.paused) return;
+            if (!this.canAct()) return;
             mouseStartX = e.clientX;
             mouseStartY = e.clientY;
             mouseStartTime = Date.now();
@@ -867,7 +881,7 @@ class Tetris {
         });
 
         this.canvas.addEventListener('mousemove', (e) => {
-            if (!isMouseDown || this.gameOver || this.paused) return;
+            if (!isMouseDown || !this.canAct()) return;
 
             const deltaX = e.clientX - mouseStartX;
             const deltaY = e.clientY - mouseStartY;
@@ -881,15 +895,13 @@ class Tetris {
             }
 
             if (deltaY > minDrag) {
-                this.drop();
-                this.score += 1;
-                this.updateScore();
+                this.softDrop();
                 mouseStartY = e.clientY;
             }
         });
 
         this.canvas.addEventListener('mouseup', (e) => {
-            if (this.gameOver || this.paused) return;
+            if (!this.canAct()) return;
 
             const deltaX = e.clientX - mouseStartX;
             const deltaY = e.clientY - mouseStartY;
@@ -917,6 +929,7 @@ class Tetris {
      * 自動玩法會大幅提高遊戲速度
      */
     toggleAutoPlay() {
+        if (!this.started || this.gameOver || !this.currentPiece) return;
         this.autoPlay = !this.autoPlay;
         if (this.autoPlay && this.started && !this.gameOver && !this.paused) {
             this.dropInterval = Math.max(50, this.dropInterval / 10);  // 加速 10 倍
