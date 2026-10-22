@@ -588,6 +588,13 @@ class Tetris {
      * 繪製遊戲畫面
      * 清空畫布並繪製遊戲區域與當前方塊
      */
+    getGhostPiece() {
+        if (!this.canAct()) return null;
+        const ghost = { ...this.currentPiece };
+        while (!this.collide(this.board, { ...ghost, y: ghost.y + 1 })) ghost.y++;
+        return ghost;
+    }
+
     draw() {
         // 清空畫布，填入背景色
         this.ctx.fillStyle = '#16213e';
@@ -598,6 +605,21 @@ class Tetris {
             for (let x = 0; x < COLS; x++) {
                 if (this.board[y][x] !== 0) {
                     this.drawBlock(x, y, COLORS[this.board[y][x]]);
+                }
+            }
+        }
+
+        const ghost = this.getGhostPiece();
+        if (ghost) {
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            this.ctx.lineWidth = 2;
+            for (let y = 0; y < ghost.shape.length; y++) {
+                for (let x = 0; x < ghost.shape[y].length; x++) {
+                    if (ghost.shape[y][x]) this.ctx.strokeRect(
+                        (ghost.x + x) * this.blockSize + 2,
+                        (ghost.y + y) * this.blockSize + 2,
+                        this.blockSize - 4, this.blockSize - 4
+                    );
                 }
             }
         }
