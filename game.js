@@ -234,6 +234,7 @@ class Tetris {
         this.autoPlayInterval = null;                 // 自動玩法定時器
 
         // 循環狀態
+        this.rafId = null;
         this.isLooping = false;                      // 記錄循環是否正在運行
 
         // 綁定鍵盤與按鈕事件
@@ -256,6 +257,9 @@ class Tetris {
      * 重置所有遊戲變數並準備開始新遊戲
      */
     init() {
+        this.stopLoop();
+        document.getElementById('pause-overlay').classList.add('hidden');
+        document.getElementById('game-over').classList.add('hidden');
         this.sounds.init();                              // 初始化音效系統
         this.board = this.createBoard();                // 建立新遊戲區域
         this.score = 0;                                 // 重置分數
@@ -288,6 +292,7 @@ class Tetris {
      * 產生第一個方塊並啟動遊戲循環
      */
     start() {
+        if (this.started || this.gameOver) return;
         this.started = true;
         this.spawnPiece();                            // 產生第一個方塊
         this.lastDrop = Date.now();
@@ -682,28 +687,26 @@ class Tetris {
      * 遊戲主循環
      * 使用 requestAnimationFrame 實現流暢的遊戲更新
      */
+    stopLoop() {
+        if (this.rafId !== null) cancelAnimationFrame(this.rafId);
+        this.rafId = null;
+        this.isLooping = false;
+    }
+
     gameLoop() {
-        if (this.gameOver) {
+        if (this.rafId !== null || this.gameOver || this.paused) return;
+        this.isLooping = true;
+        const now = Date.now();
+        if (this.started && this.currentPiece && now - this.lastDrop > this.dropInterval) this.drop();
+        this.draw();
+        if (this.gameOver || this.paused) {
             this.isLooping = false;
             return;
         }
-        this.isLooping = true;
-
-        // 遊戲尚未開始時只進行繪製
-        if (!this.started) {
-            this.draw();
-            requestAnimationFrame(() => this.gameLoop());
-            return;
-        }
-
-        // 檢查是否應該自動掉落
-        const now = Date.now();
-        if (!this.paused && this.currentPiece && now - this.lastDrop > this.dropInterval) {
-            this.drop();  // 執行軟掉落
-        }
-
-        this.draw();  // 繪製遊戲畫面
-        requestAnimationFrame(() => this.gameLoop());  // 繼續循環
+        this.rafId = requestAnimationFrame(() => {
+            this.rafId = null;
+            this.gameLoop();
+        });
     }
 
     /**
@@ -711,6 +714,7 @@ class Tetris {
      * 播放遊戲結束音效並顯示結束面板
      */
     showGameOver() {
+        this.stopLoop();
         this.sounds.gameOver();  // 播放結束音效
 
         // 如果自動玩法開啟，則停止並還原速度
@@ -738,6 +742,7 @@ class Tetris {
         const overlay = document.getElementById('pause-overlay');
 
         if (this.paused) {
+            this.stopLoop();
             // 進入暫停狀態
             overlay.classList.remove('hidden');
             if (this.autoPlayInterval) {
