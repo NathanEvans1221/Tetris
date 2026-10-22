@@ -41,8 +41,8 @@ class SoundManager {
      * @param {string} type - 波形類型 (square/sine/sawtooth)
      * @param {number} volume - 音量 (0-1)
      */
-    playTone(freq, duration, type = 'square', volume = 0.1) {
-        if (!this.enabled || !this.ctx) return;
+    playTone(freq, duration, type = 'square', volume = 0.1, channel = 'sfx') {
+        if (!this.ctx || !(channel === 'bgm' ? this.bgmEnabled : this.enabled)) return;
 
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
@@ -70,7 +70,7 @@ class SoundManager {
         const playNote = () => {
             if (!this.bgmEnabled) return;
             const note = this.bgmNotes[this.bgmIndex];
-            this.playTone(note.freq, note.dur * 0.8, 'sine', 0.04);
+            this.playTone(note.freq, note.dur * 0.8, 'sine', 0.04, 'bgm');
             this.bgmIndex = (this.bgmIndex + 1) % this.bgmNotes.length;
         };
 
