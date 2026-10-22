@@ -1017,35 +1017,6 @@ class Tetris {
         this.autoPlayInterval = interval;
     }
 
-    calculateBestMove() {
-        const piece = this.currentPiece;
-        if (!piece) return null;
-
-        let bestScore = -Infinity;
-        let best = null;
-
-        const shapes = this.getAllRotations(piece.shape);
-
-        for (let r = 0; r < shapes.length; r++) {
-            const shape = shapes[r];
-            const width = shape[0].length;
-
-            for (let x = -2; x <= COLS - width + 2; x++) {
-                if (this.canPlace(piece.shape, x, 0)) {
-                    const landingY = this.getDropY(piece.shape, x);
-                    const score = this.evaluateMove(piece.shape, x, landingY);
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        best = { x: x, rotate: r };
-                    }
-                }
-            }
-        }
-
-        return best;
-    }
-
     getAllRotations(shape) {
         const result = [shape];
         let current = shape;

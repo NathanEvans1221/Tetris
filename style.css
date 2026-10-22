@@ -56,13 +56,6 @@ body {
 .header-buttons {
     display: inline-flex;
     gap: 8px;
-    margin-top: 5px;
-}
-
-/* 按鈕樣式重複定義 (保持相容性) */
-.header-buttons {
-    display: inline-flex;
-    gap: 8px;
     vertical-align: middle;
     margin-top: 6px;
 }
@@ -128,17 +121,6 @@ body {
     position: relative;
 }
 
-/* 下一個方塊預覽區 */
-.next-piece {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    background: var(--bg-medium);
-    padding: 6px 12px;
-    border-radius: 10px;
-    gap: 15px;
-}
-
 /* 遊戲主畫布 */
 #game-canvas {
     background: var(--bg-medium);
@@ -148,7 +130,7 @@ body {
     box-shadow: 0 0 20px rgba(233, 69, 96, 0.3);
 }
 
-/* 預覽區樣式重複定義 */
+/* 下一個方塊預覽區 */
 .next-piece {
     display: flex;
     flex-direction: row;

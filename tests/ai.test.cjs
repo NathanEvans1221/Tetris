@@ -23,3 +23,10 @@ test('AI callback from a previous session cannot move a new game',()=>{
     g.init();g.start();g.toggleAutoPlay();const before=JSON.stringify([g.currentPiece,g.board,g.score]);
     old();assert.equal(JSON.stringify([g.currentPiece,g.board,g.score]),before);
 });
+test('AI selects the horizontal placement that completes a row',()=>{
+    const h=createGame();const g=h.start();
+    g.currentPiece={shape:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],color:1,x:3,y:0};
+    g.board[19].fill(7);for(let x=0;x<4;x++)g.board[19][x]=0;
+    const before=JSON.stringify(g.board);const best=g.findBestMove();
+    assert.equal(best.x,0);assert.equal(best.rotations,0);assert.equal(JSON.stringify(g.board),before);
+});
