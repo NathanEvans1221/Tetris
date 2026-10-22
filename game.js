@@ -386,7 +386,7 @@ class Tetris {
             const oldLevel = this.level;
             this.level = Math.floor(this.lines / 10) + 1;
             // 速度計算: 每升一級減少 100ms，最少 100ms
-            this.dropInterval = Math.max(100, 1000 - (this.level - 1) * 100);
+            this.updateDropInterval();
 
             this.sounds.lineClear(linesCleared);  // 播放消除音效
             if (this.level > oldLevel) {
@@ -725,7 +725,7 @@ class Tetris {
                 this.autoPlayInterval = null;
             }
             document.getElementById('btn-auto').textContent = '🤖';
-            this.dropInterval = Math.min(1000, this.dropInterval * 10);
+            this.updateDropInterval();
         }
 
         // 顯示最終分數與遊戲結束畫面
@@ -933,17 +933,18 @@ class Tetris {
      * 切換自動玩法開關
      * 自動玩法會大幅提高遊戲速度
      */
+    updateDropInterval() {
+        const base = Math.max(100, 1000 - (this.level - 1) * 100);
+        this.dropInterval = this.autoPlay ? Math.max(50, base / 10) : base;
+    }
+
     toggleAutoPlay() {
         if (!this.started || this.gameOver || !this.currentPiece) return;
         this.autoPlay = !this.autoPlay;
-        if (this.autoPlay && this.started && !this.gameOver && !this.paused) {
-            this.dropInterval = Math.max(50, this.dropInterval / 10);  // 加速 10 倍
-            this.runAutoPlay();
-        } else if (!this.autoPlay && this.autoPlayInterval) {
-            clearInterval(this.autoPlayInterval);
-            this.autoPlayInterval = null;
-            this.dropInterval = Math.min(1000, this.dropInterval * 10);  // 還原速度
-        }
+        if (this.autoPlayInterval !== null) clearInterval(this.autoPlayInterval);
+        this.autoPlayInterval = null;
+        this.updateDropInterval();
+        if (this.autoPlay && !this.paused) this.runAutoPlay();
     }
 
     /**
@@ -960,12 +961,13 @@ class Tetris {
         let currentPieceId = null; // 記錄當前方塊 ID
 
         // 每 200ms 執行一次 AI 決策
-        this.autoPlayInterval = setInterval(() => {
+        const interval = setInterval(() => {
+            if (this.autoPlayInterval !== interval) return;
             if (this.gameOver || this.paused || !this.autoPlay || !this.currentPiece) {
                 return;
             }
 
-            const pieceId = this.currentPiece.color;
+            const pieceId = this.currentPiece;
 
             if (pieceId !== currentPieceId) {
                 const best = this.findBestMove();
@@ -988,6 +990,7 @@ class Tetris {
                 currentPieceId = null;
             }
         }, 200);
+        this.autoPlayInterval = interval;
     }
 
     calculateBestMove() {
