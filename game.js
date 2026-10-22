@@ -230,6 +230,9 @@ class Tetris {
         // 計時與速度控制
         this.dropInterval = 1000;                    // 自動掉落間隔 (毫秒)
         this.lastDrop = 0;                           // 上次掉落時間戳
+        this.lockStartedAt = null;
+        this.lockResets = 0;
+        this.pausedAt = null;
         this.lastLevel = 1;                          // 記錄前一次等級
 
         // 自動玩法功能
@@ -294,6 +297,9 @@ class Tetris {
         this.currentPiece = null;                       // 清除當前方塊
         this.dropInterval = 1000;                       // 重置掉落速度
         this.lastDrop = Date.now();                     // 重置計時
+        this.lockStartedAt = null;
+        this.lockResets = 0;
+        this.pausedAt = null;
         this.lastLevel = 1;                             // 重置等級記錄
 
         // 停止並清除自動玩法定時器
@@ -342,15 +348,39 @@ class Tetris {
 
     hardDrop() {
         if (!this.canAct()) return;
-        // 持續向下直到無法移動
-        while (!this.collide(this.board, { ...this.currentPiece, y: this.currentPiece.y + 1 })) {
-            this.currentPiece.y++;
-            this.score += 2;  // 每次移動獲得 2 分
+        const landing = this.getGhostPiece();
+        this.score += (landing.y - this.currentPiece.y) * 2;
+        this.currentPiece.y = landing.y;
+        this.settlePiece();
+    }
+
+    isGrounded() {
+        return !!this.currentPiece && this.collide(this.board, { ...this.currentPiece, y: this.currentPiece.y + 1 });
+    }
+
+    updateLockDelay(reset = false) {
+        if (!this.canAct()) return;
+        if (reset && this.lockStartedAt !== null && this.lockResets < 15) {
+            this.lockStartedAt = Date.now();
+            this.lockResets++;
         }
-        this.lock();           // 鎖定方塊
-        this.clearLines();     // 檢查消除
-        this.spawnPiece();     // 產生新方塊
-        this.updateScore();    // 更新顯示
+        if (this.lockStartedAt === null && this.isGrounded()) this.lockStartedAt = Date.now();
+    }
+
+    settlePiece() {
+        if (!this.canAct()) return;
+        const aboveTop = this.currentPiece.shape.some((row, y) =>
+            row.some(cell => cell !== 0 && this.currentPiece.y + y < 0));
+        if (aboveTop) {
+            this.gameOver = true;
+            this.showGameOver();
+            return;
+        }
+        this.lock();
+        this.clearLines();
+        this.spawnPiece();
+        this.lastDrop = Date.now();
+        this.updateScore();
     }
 
     /**
@@ -443,6 +473,8 @@ class Tetris {
 
     spawnPiece() {
         const piece = this.nextPiece || this.randomPiece();
+        this.lockStartedAt = null;
+        this.lockResets = 0;
         this.currentPiece = { ...piece, shape: piece.shape.map(row => [...row]), x: Math.floor(COLS / 2) - 2, y: 0 };
         this.nextPiece = this.randomPiece();
 
@@ -452,6 +484,7 @@ class Tetris {
             this.showGameOver();  // 顯示遊戲結束畫面
         }
 
+        this.updateLockDelay();
         this.drawNextPiece();    // 繪製下一個方塊預覽
     }
 
@@ -482,23 +515,24 @@ class Tetris {
 
     /**
      * 旋轉當前方塊
-     * 順時針旋轉 90 度，若旋轉後碰撞則還原
+     * 順時針旋轉 90 度，依簡化踢牆規則尋找合法位置
      */
     rotate() {
         if (!this.canAct()) return false;
-        // 矩陣旋轉演算法: 先轉置再反轉每行
-        const rotated = this.currentPiece.shape[0].map((_, i) =>
-            this.currentPiece.shape.map(row => row[i]).reverse()
-        );
-        const previous = this.currentPiece.shape;  // 儲存旋轉前的狀態
-        this.currentPiece.shape = rotated;          // 套用旋轉後的形狀
-
-        // 檢查旋轉後是否碰撞，若碰撞則還原
-        if (this.collide(this.board, this.currentPiece)) {
-            this.currentPiece.shape = previous;
-        } else {
-            this.sounds.rotate();  // 播放旋轉音效
+        const rotated = this.rotateMatrix(this.currentPiece.shape);
+        if (this.matricesEqual(rotated, this.currentPiece.shape)) return false;
+        const kicks = [[0,0], [-1,0], [1,0], [-2,0], [2,0], [0,-1]];
+        if (this.currentPiece.color === 1) kicks.push([0,-2]);
+        for (const [dx, dy] of kicks) {
+            const candidate = { ...this.currentPiece, shape: rotated, x: this.currentPiece.x + dx, y: this.currentPiece.y + dy };
+            if (!this.collide(this.board, candidate)) {
+                Object.assign(this.currentPiece, candidate);
+                this.updateLockDelay(true);
+                this.sounds.rotate();
+                return true;
+            }
         }
+        return false;
     }
 
     /**
@@ -510,32 +544,26 @@ class Tetris {
         this.currentPiece.x += dir;  // 嘗試移動
         if (this.collide(this.board, this.currentPiece)) {
             this.currentPiece.x -= dir;  // 碰撞則還原
+            return false;
         } else {
+            this.updateLockDelay(true);
             this.sounds.move();  // 播放移動音效
+            return true;
         }
     }
 
     /**
      * 軟掉落 - 方塊下降一格
-     * 若無法下降則鎖定方塊並檢查消除
+     * 接地時啟動落地延遲，由動畫迴圈決定何時鎖定
      */
     drop() {
-        // 如果方塊為空，則直接返回
         if (!this.canAct()) return false;
-
-        this.currentPiece.y++;
-        if (this.collide(this.board, this.currentPiece)) {
-            this.currentPiece.y--;
-            this.lock();
-            this.clearLines();
-            this.spawnPiece();
-            this.lastDrop = Date.now();
-            return false;
-        }
+        const moved = !this.collide(this.board, { ...this.currentPiece, y: this.currentPiece.y + 1 });
+        if (moved) this.currentPiece.y++;
+        this.updateLockDelay();
         this.lastDrop = Date.now();
-        return true;
+        return moved;
     }
-
 
     /**
      * 消除行數動畫效果
@@ -724,6 +752,10 @@ class Tetris {
         this.isLooping = true;
         const now = Date.now();
         if (this.started && this.currentPiece && now - this.lastDrop > this.dropInterval) this.drop();
+        if (this.canAct() && this.isGrounded()) {
+            this.updateLockDelay();
+            if (now - this.lockStartedAt >= 500) this.settlePiece();
+        }
         this.draw();
         if (this.gameOver || this.paused) {
             this.isLooping = false;
@@ -768,6 +800,7 @@ class Tetris {
         const overlay = document.getElementById('pause-overlay');
 
         if (this.paused) {
+            this.pausedAt = Date.now();
             this.stopLoop();
             // 進入暫停狀態
             overlay.classList.remove('hidden');
@@ -778,6 +811,8 @@ class Tetris {
         } else {
             // 繼續遊戲
             overlay.classList.add('hidden');
+            if (this.lockStartedAt !== null && this.pausedAt !== null) this.lockStartedAt += Date.now() - this.pausedAt;
+            this.pausedAt = null;
             this.lastDrop = Date.now();  // 重置計時避免瞬間掉落
             if (this.autoPlay) {
                 this.runAutoPlay();  // 恢復自動玩法
