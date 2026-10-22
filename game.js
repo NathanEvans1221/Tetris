@@ -205,11 +205,13 @@ class Tetris {
         // 建立音效管理器
         this.sounds = new SoundManager();
 
+        this.blockSize = BLOCK_SIZE;
+
         // 設定畫布尺寸
-        this.canvas.width = COLS * BLOCK_SIZE;      // 遊戲區域寬度
-        this.canvas.height = ROWS * BLOCK_SIZE;     // 遊戲區域高度
-        this.nextCanvas.width = 4 * BLOCK_SIZE;     // 預覽區寬度
-        this.nextCanvas.height = 4 * BLOCK_SIZE;    // 預覽區高度
+        this.canvas.width = COLS * this.blockSize;      // 遊戲區域寬度
+        this.canvas.height = ROWS * this.blockSize;     // 遊戲區域高度
+        this.nextCanvas.width = 4 * this.blockSize;     // 預覽區寬度
+        this.nextCanvas.height = 4 * this.blockSize;    // 預覽區高度
 
         // 遊戲狀態
         this.board = this.createBoard();             // 遊戲區域 (20x10 的二維陣列)
@@ -239,6 +241,7 @@ class Tetris {
 
         // 綁定鍵盤與按鈕事件
         this.bindEvents();
+        this.resize();
 
         // 啟動初始遊戲循環 (負責繪製背景與未開始狀態)
         this.gameLoop();
@@ -248,6 +251,22 @@ class Tetris {
      * 建立空的遊戲區域
      * @returns {Array<Array<number>>} 20x10 的二維陣列，0 表示空
      */
+    resize() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        const landscape = width > height && height <= 500;
+        const header = document.querySelector('.game-header').getBoundingClientRect().height;
+        const controls = document.querySelector('.mobile-controls').getBoundingClientRect().height;
+        const availableWidth = Math.min(landscape ? 800 : 500, width) / (landscape ? 2 : 1) - 24;
+        const availableHeight = Math.min(height, 1000) - (landscape ? 40 : header + controls + 64);
+        this.blockSize = Math.max(6, Math.min(28, Math.floor(availableWidth / COLS), Math.floor(availableHeight / 24)));
+        this.canvas.width = COLS * this.blockSize;
+        this.canvas.height = ROWS * this.blockSize;
+        this.nextCanvas.width = this.nextCanvas.height = 4 * this.blockSize;
+        this.draw();
+        this.drawNextPiece();
+    }
+
     createBoard() {
         return Array.from({ length: ROWS }, () => Array(COLS).fill(0));
     }
@@ -627,27 +646,27 @@ class Tetris {
         // 繪製方塊主體
         this.ctx.fillStyle = color;
         this.ctx.fillRect(
-            x * BLOCK_SIZE + padding,
-            y * BLOCK_SIZE + padding,
-            BLOCK_SIZE - padding * 2,
-            BLOCK_SIZE - padding * 2
+            x * this.blockSize + padding,
+            y * this.blockSize + padding,
+            this.blockSize - padding * 2,
+            this.blockSize - padding * 2
         );
 
         // 繪製左上角高光效果 (模擬 3D 感)
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         this.ctx.fillRect(
-            x * BLOCK_SIZE + padding,
-            y * BLOCK_SIZE + padding,
-            BLOCK_SIZE - padding * 2,
+            x * this.blockSize + padding,
+            y * this.blockSize + padding,
+            this.blockSize - padding * 2,
             4
         );
 
         // 繪製右下角陰影效果 (模擬 3D 感)
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         this.ctx.fillRect(
-            x * BLOCK_SIZE + padding,
-            y * BLOCK_SIZE + BLOCK_SIZE - 6,
-            BLOCK_SIZE - padding * 2,
+            x * this.blockSize + padding,
+            y * this.blockSize + this.blockSize - 6,
+            this.blockSize - padding * 2,
             4
         );
     }
@@ -673,10 +692,10 @@ class Tetris {
                 if (this.nextPiece.shape[y][x] !== 0) {
                     this.nextCtx.fillStyle = COLORS[this.nextPiece.color];
                     this.nextCtx.fillRect(
-                        (offsetX + x) * BLOCK_SIZE + 1,
-                        (offsetY + y) * BLOCK_SIZE + 1,
-                        BLOCK_SIZE - 2,
-                        BLOCK_SIZE - 2
+                        (offsetX + x) * this.blockSize + 1,
+                        (offsetY + y) * this.blockSize + 1,
+                        this.blockSize - 2,
+                        this.blockSize - 2
                     );
                 }
             }
@@ -765,6 +784,8 @@ class Tetris {
      * 包括鍵盤、手機觸控、滑鼠與按鈕點擊
      */
     bindEvents() {
+        window.addEventListener('resize', () => this.resize());
+        window.addEventListener('orientationchange', () => this.resize());
         document.addEventListener('visibilitychange', () => {
             if (document.hidden && this.started && !this.gameOver && !this.paused) this.togglePause();
         });
