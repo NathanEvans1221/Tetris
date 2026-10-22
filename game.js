@@ -308,7 +308,7 @@ class Tetris {
      * 每次下落 2 分，快速填充時使用
      */
     canAct() {
-        return this.started && !this.gameOver && !this.paused && !!this.currentPiece;
+        return this.started && !this.gameOver && !this.paused && !document.hidden && !!this.currentPiece;
     }
 
     softDrop() {
@@ -737,7 +737,7 @@ class Tetris {
      * 切換暫停/繼續狀態
      */
     togglePause() {
-        if (!this.started || this.gameOver) return;
+        if (!this.started || this.gameOver || (this.paused && document.hidden)) return;
         this.paused = !this.paused;
         const overlay = document.getElementById('pause-overlay');
 
@@ -765,6 +765,9 @@ class Tetris {
      * 包括鍵盤、手機觸控、滑鼠與按鈕點擊
      */
     bindEvents() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.started && !this.gameOver && !this.paused) this.togglePause();
+        });
         // 鍵盤控制
         document.addEventListener('keydown', (e) => {
             if (this.gameOver || !this.started) return;
